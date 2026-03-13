@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kleurenwiezen</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0c08;
+    --card: #1a1510;
+    --card2: #221d16;
+    --border: #3a2e1e;
+    --gold: #c9a227;
+    --gold2: #e8c547;
+    --red: #c0392b;
+    --red2: #e05c4e;
+    --green: #27ae60;
+    --green2: #5fca87;
+    --text: #e8dcc8;
+    --muted: #8a7a62;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(139,58,58,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(201,162,39,0.06) 0%, transparent 50%);
+  }
+  header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  header::before {
+    content: '♠ ♥ ♦ ♣';
+    display: block;
+    font-size: 0.85rem;
+    letter-spacing: 0.6rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold) 30%, var(--gold2) 70%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+  .subtitle { color: var(--muted); font-style: italic; font-size: 1rem; margin-top: 0.4rem; letter-spacing: 0.1em; }
+  .container { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+  /* Scoreboard */
+  .scoreboard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.6);
+  }
+  .scoreboard-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    background: var(--card2);
+    border-bottom: 2px solid var(--gold);
+  }
+  .player-header { padding: 1rem 0.5rem 0.8rem; text-align: center; border-right: 1px solid var(--border); }
+  .player-header:last-child { border-right: none; }
+  .player-name-input {
+    background: transparent; border: none; color: var(--gold2);
+    font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700;
+    text-align: center; width: 100%; outline: none; cursor: pointer; letter-spacing: 0.05em;
+  }
+  .player-name-input:focus { border-bottom: 1px solid var(--gold); }
+  .player-name-input::placeholder { color: var(--muted); }
+  .player-total { font-size: 1.6rem; font-weight: 700; font-family: 'Playfair Display', serif; margin-top: 0.2rem; transition: color 0.3s; }
+  .player-total.positive { color: var(--green); }
+  .player-total.negative { color: var(--red); }
+  .player-total.zero { color: var(--muted); }
+  .rounds-container { max-height: 380px; overflow-y: auto; }
+  .rounds-container::-webkit-scrollbar { width: 4px; }
+  .rounds-container::-webkit-scrollbar-track { background: var(--card); }
+  .rounds-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .round-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  .round-row:last-child { border-bottom: none; }
+  .round-cell { padding: 0.5rem 0.4rem; text-align: center; font-size: 1rem; border-right: 1px solid var(--border); font-weight: 600; }
+  .round-cell:last-child { border-right: none; }
+  .round-cell.pos  { color: var(--green2); }
+  .round-cell.neg  { color: var(--red2); }
+  .round-cell.zero { color: var(--muted); }
+  .round-cell.info { font-size: 0.8rem; color: var(--muted); text-align: left; padding-left: 0.7rem; display: flex; align-items: center; font-weight: 400; font-style: italic; }
+  .empty-state { padding: 3rem 1rem; text-align: center; color: var(--muted); font-style: italic; font-size: 1.05rem; }
+
+  /* Form */
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 1.8rem; box-shadow: 0 4px 40px rgba(0,0,0,0.5); }
+  .form-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.7rem; }
+  .form-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .form-group { margin-bottom: 1.4rem; }
+  label { display: block; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .game-type-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 1.2rem; }
+  .piccolo-results { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+  .piccolo-player-row { display: flex; align-items: center; justify-content: space-between; background: var(--card2); border: 1px solid var(--border); border-radius: 3px; padding: 0.5rem 0.9rem; }
+  .piccolo-player-name { font-weight: 600; font-size: 1rem; }
+  .piccolo-btns { display: flex; gap: 0.4rem; }
+  .piccolo-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.3rem 0.8rem; border-radius: 3px; cursor: pointer; font-family: 'Crimson Pro', serif; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+  .piccolo-btn.win.active  { background: rgba(39,174,96,0.15); border-color: var(--green2); color: var(--green2); }
+  .piccolo-btn.lose.active { background: rgba(192,57,43,0.15); border-color: var(--red2); color: var(--red2); }
+  .piccolo-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .type-btn { background: var(--card2); border: 1px solid var(--border); color: var(--text); padding: 0.9rem; border-radius: 3px; cursor: pointer; font-family: 'Crimson Pro', serif; font-size: 1rem; font-weight: 600; transition: all 0.2s; text-align: center; }
+  .type-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .type-btn.active { background: rgba(201,162,39,0.12); border-color: var(--gold); color: var(--gold2); box-shadow: 0 0 12px rgba(201,162,39,0.15); }
+  .type-btn.klop-active-g { background: rgba(39,174,96,0.12); border-color: var(--green2); color: var(--green2); box-shadow: 0 0 12px rgba(39,174,96,0.15); }
+  .type-btn.klop-active-t { background: rgba(192,57,43,0.12); border-color: var(--red2); color: var(--red2); box-shadow: 0 0 12px rgba(192,57,43,0.15); }
+  .player-select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .player-check { display: flex; align-items: center; gap: 0.5rem; background: var(--card2); border: 1px solid var(--border); border-radius: 3px; padding: 0.7rem 0.9rem; cursor: pointer; transition: all 0.2s; user-select: none; }
+  .player-check:hover { border-color: var(--gold); }
+  .player-check.selected { background: rgba(201,162,39,0.1); border-color: var(--gold); }
+  .check-box { width: 16px; height: 16px; border: 1px solid var(--muted); border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .player-check.selected .check-box { background: var(--gold); border-color: var(--gold); color: var(--bg); }
+  .tricks-row { display: flex; align-items: center; gap: 1rem; }
+  .tricks-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+  .tricks-label { font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .tricks-hint  { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+  .tricks-divider { color: var(--muted); font-size: 1rem; font-style: italic; padding-top: 1rem; }
+  .tricks-stepper { display: flex; align-items: center; gap: 0.5rem; background: var(--card2); border: 1px solid var(--border); border-radius: 3px; padding: 0.4rem 0.6rem; }
+  .step-btn { background: transparent; border: none; color: var(--gold); font-size: 1.3rem; cursor: pointer; padding: 0 0.4rem; line-height: 1; font-family: 'Crimson Pro', serif; transition: color 0.15s; }
+  .step-btn:hover { color: var(--gold2); }
+  .step-val { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--text); min-width: 2rem; text-align: center; }
+  .info-box { background: rgba(201,162,39,0.06); border: 1px solid rgba(201,162,39,0.2); border-radius: 3px; padding: 0.8rem 1rem; font-size: 0.9rem; color: var(--muted); margin-top: 0.8rem; font-style: italic; line-height: 1.6; }
+  .error-msg { color: var(--red2); font-size: 0.9rem; font-style: italic; margin-top: 0.4rem; min-height: 1.2rem; }
+  .submit-btn { width: 100%; background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%); color: #0f0c08; border: none; padding: 1rem; font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; border-radius: 3px; cursor: pointer; transition: all 0.2s; margin-top: 1rem; }
+  .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(201,162,39,0.3); }
+  .submit-btn:active { transform: translateY(0); }
+  .undo-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 0.5rem 1rem; font-family: 'Crimson Pro', serif; font-size: 0.9rem; border-radius: 3px; cursor: pointer; transition: all 0.2s; margin-top: 0.6rem; display: block; width: 100%; }
+  .undo-btn:hover { border-color: var(--red); color: var(--red2); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kleurenwiezen</h1>
+  <p class="subtitle">Puntentelling</p>
+</header>
+
+<div class="container">
+  <div class="scoreboard">
+    <div class="scoreboard-header" id="playerHeaders"></div>
+    <div class="rounds-container" id="roundsContainer">
+      <div class="empty-state">Nog geen rondes gespeeld — voeg de eerste ronde toe hieronder.</div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-title">Nieuwe ronde</div>
+
+    <div class="form-group">
+      <label>Speltype</label>
+      <div class="game-type-group">
+        <button class="type-btn active" id="btnBieden"       onclick="setMode('bieden')">Bieden duo/solo</button>
+        <button class="type-btn"        id="btnTroel"        onclick="setMode('troel')">Troel 8/9</button>
+        <button class="type-btn"        id="btnPiccolo"      onclick="setMode('piccolo')">Piccolo</button>
+        <button class="type-btn"        id="btnMiserie"      onclick="setMode('miserie')">Miserie</button>
+        <button class="type-btn"        id="btnBloteMiserie" onclick="setMode('blotemiserie')">Blote Miserie</button>
+        <button class="type-btn"        id="btnSoloSlim"     onclick="setMode('soloSlim')">Solo Slim</button>
+        <button class="type-btn"        id="btnGeklopt"      onclick="toggleKlop('geklopt')">Geklopt <span style="font-size:0.75em;opacity:0.7">×2</span></button>
+        <button class="type-btn"        id="btnTegengeklopt" onclick="toggleKlop('tegengeklopt')">Tegengeklopt <span style="font-size:0.75em;opacity:0.7">×4</span></button>
+      </div>
+      <label id="playerSelectLabel">Wie bieden? — kies 1 of 2 spelers</label>
+      <div class="player-select-group" id="playerCheckboxes"></div>
+      <div class="error-msg" id="playerError"></div>
+      <div class="piccolo-results" id="piccoloResults" style="display:none"></div>
+    </div>
+
+    <div class="form-group" id="slagenGroup">
+      <label>Slagen</label>
+      <div class="tricks-row">
+        <div class="tricks-col">
+          <span class="tricks-label">Geboden</span>
+          <div class="tricks-stepper">
+            <button class="step-btn" onclick="changeBid(-1)">−</button>
+            <span class="step-val" id="bidVal">6</span>
+            <button class="step-btn" onclick="changeBid(1)">+</button>
+          </div>
+          <span class="tricks-hint" id="bidHint">min. 6</span>
+        </div>
+        <div class="tricks-divider">vs</div>
+        <div class="tricks-col">
+          <span class="tricks-label">Gehaald</span>
+          <div class="tricks-stepper">
+            <button class="step-btn" onclick="changeTricks(-1)">−</button>
+            <span class="step-val" id="tricksVal">6</span>
+            <button class="step-btn" onclick="changeTricks(1)">+</button>
+          </div>
+          <span class="tricks-hint">0 – 13</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box" id="infoBox">Selecteer spelers om de puntenverdeling te zien.</div>
+
+    <button class="submit-btn" onclick="addRound()">Ronde toevoegen</button>
+    <button class="undo-btn" id="undoBtn" onclick="undoRound()" style="display:none">↩ Laatste ronde ongedaan maken</button>
+  </div>
+</div>
+
+<script>
+  var players         = ['Speler 1', 'Speler 2', 'Speler 3', 'Speler 4'];
+  var rounds          = [];
+  var selectedPlayers = [];
+  var mode            = 'bieden';
+  var gameType        = 'met2';
+  var piccoloWins     = {};
+  var bid             = 6;
+  var tricks          = 6;
+  var klop            = null; // null | 'geklopt' | 'tegengeklopt'
+
+  function init() {
+    renderPlayerHeaders();
+    renderCheckboxes();
+    updateInfo();
+  }
+
+  function setMode(m) {
+    mode = m;
+    selectedPlayers = [];
+    piccoloWins = {};
+
+    ['btnBieden','btnTroel','btnPiccolo','btnMiserie','btnBloteMiserie','btnSoloSlim'].forEach(function(id) {
+      document.getElementById(id).classList.remove('active');
+    });
+    var map = {bieden:'btnBieden',troel:'btnTroel',piccolo:'btnPiccolo',miserie:'btnMiserie',blotemiserie:'btnBloteMiserie',soloSlim:'btnSoloSlim'};
+    if (map[m]) document.getElementById(map[m]).classList.add('active');
+
+    var isPiccolo = (m === 'piccolo' || m === 'miserie' || m === 'blotemiserie' || m === 'soloSlim');
+    document.getElementById('slagenGroup').style.display = isPiccolo ? 'none' : '';
+    document.getElementById('piccoloResults').style.display = 'none';
+
+    document.getElementById('playerSelectLabel').textContent =
+      m === 'troel'        ? 'Wie spelen de troel? — kies 2 spelers' :
+      m === 'soloSlim'     ? 'Wie speelt solo slim? — kies 1 speler' :
+      m === 'blotemiserie' ? 'Wie spelen blote miserie? — kies 1 of 2 spelers' :
+      m === 'miserie'      ? 'Wie spelen miserie? — kies 1 of 2 spelers' :
+      m === 'piccolo'      ? 'Wie spelen piccolo? — kies 1 of 2 spelers' :
+                             'Wie bieden? — kies 1 of 2 spelers';
+
+    var minBid = m === 'troel' ? 8 : (gameType === 'alleen' ? 5 : 6);
+    bid = Math.max(bid, minBid);
+    document.getElementById('bidVal').textContent = bid;
+    document.getElementById('bidHint').textContent = 'min. ' + minBid;
+
+    renderCheckboxes();
+    updateInfo();
+  }
+
+  function toggleKlop(k) {
+    klop = (klop === k) ? null : k;
+    document.getElementById('btnGeklopt').className      = 'type-btn' + (klop === 'geklopt'      ? ' klop-active-g' : '');
+    document.getElementById('btnTegengeklopt').className = 'type-btn' + (klop === 'tegengeklopt' ? ' klop-active-t' : '');
+    updateInfo();
+  }
+
+  function renderPlayerHeaders() {
+    var container = document.getElementById('playerHeaders');
+    if (!container.children.length) {
+      container.innerHTML = players.map(function(name, i) {
+        return '<div class="player-header">' +
+          '<input class="player-name-input" id="playerInput' + i + '" value="' + name + '" placeholder="Naam ' + (i+1) + '"' +
+          ' oninput="players[' + i + '] = this.value; renderCheckboxes();">' +
+          '<div class="player-total zero" id="total' + i + '">0</div>' +
+          '</div>';
+      }).join('');
+    }
+    var totals = getTotals();
+    for (var i = 0; i < 4; i++) {
+      var el = document.getElementById('total' + i);
+      if (el) {
+        el.textContent = totals[i] > 0 ? '+' + totals[i] : totals[i];
+        el.className = 'player-total ' + (totals[i] > 0 ? 'positive' : totals[i] < 0 ? 'negative' : 'zero');
+      }
+    }
+  }
+
+  function getTotals() {
+    var t = [0, 0, 0, 0];
+    rounds.forEach(function(r) { r.scores.forEach(function(s, i) { t[i] += s; }); });
+    return t;
+  }
+
+  function renderRounds() {
+    renderPlayerHeaders();
+    var container = document.getElementById('roundsContainer');
+    if (!rounds.length) {
+      container.innerHTML = '<div class="empty-state">Nog geen rondes gespeeld — voeg de eerste ronde toe hieronder.</div>';
+      document.getElementById('undoBtn').style.display = 'none';
+      return;
+    }
+    container.innerHTML = rounds.map(function(r) {
+      var klopTxt = r.klop === 'geklopt' ? ' ×2' : r.klop === 'tegengeklopt' ? ' ×4' : '';
+      var infoLabel =
+        r.mode === 'soloSlim'     ? 'SS' + klopTxt :
+        r.mode === 'blotemiserie' ? 'BM' + klopTxt :
+        r.mode === 'miserie'      ? 'M'  + klopTxt :
+        r.mode === 'piccolo'      ? 'P'  + klopTxt :
+        (r.mode === 'troel' ? 'T ' : '') + r.bid + '→' + r.tricks +
+        ' (' + (r.tricks - r.bid === 0 ? 'juist' : (r.tricks - r.bid > 0 ? '+' : '') + (r.tricks - r.bid) + ' sl.') + ')' + klopTxt;
+      return '<div class="round-row">' +
+        '<div class="round-cell info">' + infoLabel + '</div>' +
+        r.scores.map(function(s) {
+          return '<div class="round-cell ' + (s > 0 ? 'pos' : s < 0 ? 'neg' : 'zero') + '">' + (s > 0 ? '+' : '') + s + '</div>';
+        }).join('') +
+        '</div>';
+    }).join('');
+    document.getElementById('undoBtn').style.display = 'block';
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderCheckboxes() {
+    var container = document.getElementById('playerCheckboxes');
+    container.innerHTML = players.map(function(name, i) {
+      var sel = selectedPlayers.includes(i);
+      return '<div class="player-check ' + (sel ? 'selected' : '') + '" onclick="togglePlayer(' + i + ')">' +
+        '<span class="check-box">' + (sel ? '✓' : '') + '</span>' + name + '</div>';
+    }).join('');
+  }
+
+  function renderPiccoloResults() {
+    var container = document.getElementById('piccoloResults');
+    var isPiccolo = (mode === 'piccolo' || mode === 'miserie' || mode === 'blotemiserie' || mode === 'soloSlim');
+    if (!isPiccolo || selectedPlayers.length === 0) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    container.innerHTML = selectedPlayers.map(function(i) {
+      var w = piccoloWins[i];
+      return '<div class="piccolo-player-row">' +
+        '<span class="piccolo-player-name">' + players[i] + '</span>' +
+        '<div class="piccolo-btns">' +
+        '<button class="piccolo-btn win ' + (w === true ? 'active' : '') + '" onclick="setPiccoloWin(' + i + ', true)">✓ Gewonnen</button>' +
+        '<button class="piccolo-btn lose ' + (w === false ? 'active' : '') + '" onclick="setPiccoloWin(' + i + ', false)">✗ Verloren</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function setPiccoloWin(idx, won) {
+    piccoloWins[idx] = won;
+    renderPiccoloResults();
+    updateInfo();
+  }
+
+  function changeBid(delta) {
+    var minBid = mode === 'troel' ? 8 : (gameType === 'alleen' ? 5 : 6);
+    bid = Math.max(minBid, Math.min(13, bid + delta));
+    document.getElementById('bidVal').textContent = bid;
+    updateInfo();
+  }
+
+  function changeTricks(delta) {
+    tricks = Math.max(0, Math.min(13, tricks + delta));
+    document.getElementById('tricksVal').textContent = tricks;
+    updateInfo();
+  }
+
+  function togglePlayer(i) {
+    var maxSel = mode === 'soloSlim' ? 1 : 2;
+    if (selectedPlayers.includes(i)) {
+      selectedPlayers = selectedPlayers.filter(function(p) { return p !== i; });
+    } else {
+      if (selectedPlayers.length >= maxSel) selectedPlayers.shift();
+      selectedPlayers.push(i);
+    }
+    if (mode === 'bieden') {
+      gameType = selectedPlayers.length === 1 ? 'alleen' : 'met2';
+      var minBid = gameType === 'alleen' ? 5 : 6;
+      if (bid < minBid) { bid = minBid; document.getElementById('bidVal').textContent = minBid; }
+      document.getElementById('bidHint').textContent = 'min. ' + minBid;
+    }
+    document.getElementById('playerError').textContent = '';
+    piccoloWins = {};
+    renderCheckboxes();
+    renderPiccoloResults();
+    updateInfo();
+  }
+
+  function calcBaseScores() {
+    var sel  = selectedPlayers;
+    var won  = tricks >= bid;
+    var diff = Math.abs(tricks - bid);
+    var s    = [0, 0, 0, 0];
+
+    if (mode === 'soloSlim') {
+      var w = piccoloWins[sel[0]];
+      if (w === true)  { s[sel[0]] =  48; for (var i=0;i<4;i++) if (!sel.includes(i)) s[i] = -16; }
+      if (w === false) { s[sel[0]] = -48; for (var i=0;i<4;i++) if (!sel.includes(i)) s[i] =  16; }
+
+    } else if (mode === 'piccolo' || mode === 'miserie' || mode === 'blotemiserie') {
+      var winPts = mode === 'blotemiserie' ? 36 : mode === 'miserie' ? 18 : 15;
+      var oppPts = mode === 'blotemiserie' ? 12 : mode === 'miserie' ?  6 :  5;
+      if (sel.length === 1) {
+        var w0 = piccoloWins[sel[0]];
+        if (w0 === true)  { s[sel[0]] =  winPts; for (var i=0;i<4;i++) if (!sel.includes(i)) s[i] = -oppPts; }
+        if (w0 === false) { s[sel[0]] = -winPts; for (var i=0;i<4;i++) if (!sel.includes(i)) s[i] =  oppPts; }
+      } else if (sel.length === 2) {
+        var w0 = piccoloWins[sel[0]], w1 = piccoloWins[sel[1]];
+        if      (w0 === true  && w1 === true)  { for (var i=0;i<4;i++) s[i] = sel.includes(i) ?  winPts : -winPts; }
+        else if (w0 === false && w1 === false) { for (var i=0;i<4;i++) s[i] = sel.includes(i) ? -winPts :  winPts; }
+        else if (w0 !== undefined && w1 !== undefined) {
+          s[sel[0]] = w0 ? winPts : -winPts;
+          s[sel[1]] = w1 ? winPts : -winPts;
+        }
+      }
+
+    } else if (mode === 'troel') {
+      if      (won && tricks === 13) { for (var i=0;i<4;i++) s[i] = sel.includes(i) ?  40 : -40; }
+      else if (!won && tricks === 0) { for (var i=0;i<4;i++) s[i] = sel.includes(i) ? -40 :  40; }
+      else { var sc = (won ? 1 : -1) * (4 + 2*diff); for (var i=0;i<4;i++) s[i] = sel.includes(i) ? sc : -sc; }
+
+    } else if (gameType === 'met2') {
+      if (won && tricks === 13) { for (var i=0;i<4;i++) s[i] = sel.includes(i) ? 10 : -10; }
+      else { var sc = (won ? 1 : -1) * (2 + diff); for (var i=0;i<4;i++) s[i] = sel.includes(i) ? sc : -sc; }
+
+    } else {
+      if (won && tricks === 13) { for (var i=0;i<4;i++) s[i] = sel.includes(i) ? 30 : -10; }
+      else {
+        var solo = won ?  (6 + diff*3) : -(6 + diff*3);
+        var opp  = won ? -(2 + diff)   :  (2 + diff);
+        for (var i=0;i<4;i++) s[i] = sel.includes(i) ? solo : opp;
+      }
+    }
+    return s;
+  }
+
+  function applyKlop(scores) {
+    var mult = klop === 'tegengeklopt' ? 4 : klop === 'geklopt' ? 2 : 1;
+    return scores.map(function(v) { return v * mult; });
+  }
+
+  function calcScores() {
+    return applyKlop(calcBaseScores());
+  }
+
+  function updateInfo() {
+    var box = document.getElementById('infoBox');
+    var sel = selectedPlayers;
+    var needsTwo = (mode === 'troel');
+
+    if (sel.length === 0 || (needsTwo && sel.length < 2)) {
+      box.textContent = needsTwo ? 'Selecteer 2 spelers voor de troel.' :
+        (mode === 'piccolo' || mode === 'miserie' || mode === 'blotemiserie' || mode === 'soloSlim')
+          ? 'Selecteer ' + (mode === 'soloSlim' ? '1 speler voor solo slim' : '1 of 2 spelers') + '.'
+          : 'Selecteer 1 speler (solo) of 2 spelers (duo) om de puntenverdeling te zien.';
+      return;
+    }
+
+    var isPiccolo = (mode === 'piccolo' || mode === 'miserie' || mode === 'blotemiserie' || mode === 'soloSlim');
+    if (isPiccolo) {
+      var allSet = sel.every(function(i) { return piccoloWins[i] !== undefined; });
+      if (!allSet) { box.textContent = 'Geef voor elke bieder aan of hij gewonnen of verloren heeft.'; return; }
+    }
+
+    var scores = calcScores();
+    var klopHtml = klop === 'tegengeklopt'
+      ? ' &nbsp;<span style="color:var(--red2)">×4 Tegengeklopt</span>'
+      : klop === 'geklopt'
+        ? ' &nbsp;<span style="color:var(--green2)">×2 Geklopt</span>'
+        : '';
+
+    var scoreLines = players.map(function(name, i) {
+      var sc = scores[i];
+      var col = sc > 0 ? 'var(--green2)' : sc < 0 ? 'var(--red2)' : 'var(--muted)';
+      return '<span style="color:' + col + '">' + name + ': ' + (sc > 0 ? '+' : '') + sc + '</span>';
+    }).join(' &nbsp;·&nbsp; ');
+
+    if (isPiccolo) {
+      var modeLabel = mode === 'soloSlim' ? 'Solo Slim' : mode === 'blotemiserie' ? 'Blote Miserie' : mode === 'miserie' ? 'Miserie' : 'Piccolo';
+      box.innerHTML = '<span style="color:var(--gold)">' + modeLabel + '</span>' + klopHtml + '<br><br>' + scoreLines;
+    } else {
+      var won = tricks >= bid;
+      var diff = tricks - bid;
+      var diffStr = diff === 0 ? 'exact'
+        : diff > 0 ? '+' + diff + (diff === 1 ? ' slag' : ' slagen') + ' extra'
+        : Math.abs(diff) + (Math.abs(diff) === 1 ? ' slag' : ' slagen') + ' te weinig';
+      var resultLabel = won
+        ? '<span style="color:var(--green2)">✓ Geslaagd</span>'
+        : '<span style="color:var(--red2)">✗ Mislukt</span>';
+      box.innerHTML = resultLabel + ' &mdash; ' + bid + ' geboden, ' + tricks + ' gehaald (' + diffStr + ')' + klopHtml + '<br><br>' + scoreLines;
+    }
+  }
+
+  function addRound() {
+    document.getElementById('playerError').textContent = '';
+    if (mode === 'troel' && selectedPlayers.length !== 2) {
+      document.getElementById('playerError').textContent = 'Kies precies 2 spelers voor een troel.'; return;
+    }
+    if (mode === 'bieden' && selectedPlayers.length === 0) {
+      document.getElementById('playerError').textContent = 'Kies 1 speler (solo) of 2 spelers (duo).'; return;
+    }
+    var isPiccolo = (mode === 'piccolo' || mode === 'miserie' || mode === 'blotemiserie' || mode === 'soloSlim');
+    if (isPiccolo) {
+      if (selectedPlayers.length === 0) { document.getElementById('playerError').textContent = 'Kies 1 of 2 spelers.'; return; }
+      var allSet = selectedPlayers.every(function(i) { return piccoloWins[i] !== undefined; });
+      if (!allSet) { document.getElementById('playerError').textContent = 'Geef voor elke bieder aan of hij gewonnen of verloren heeft.'; return; }
+    }
+
+    var scores = calcScores();
+    rounds.push({
+      scores:  scores,
+      mode:    mode,
+      klop:    klop,
+      players: selectedPlayers.slice(),
+      bid:     isPiccolo ? null : bid,
+      tricks:  isPiccolo ? null : tricks
+    });
+
+    selectedPlayers = [];
+    piccoloWins     = {};
+    klop            = null;
+    document.getElementById('btnGeklopt').className      = 'type-btn';
+    document.getElementById('btnTegengeklopt').className = 'type-btn';
+
+    renderCheckboxes();
+    renderPiccoloResults();
+    renderRounds();
+    updateInfo();
+  }
+
+  function undoRound() {
+    if (!rounds.length) return;
+    rounds.pop();
+    renderRounds();
+    updateInfo();
+  }
+
+  init();
+</script>
+</body>
+</html>
